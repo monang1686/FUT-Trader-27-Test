@@ -3,8 +3,9 @@ on:
   schedule:
     - cron: '17,47 * * * *'
   workflow_dispatch:
+  pull_request:
 permissions:
-  contents: read
+  contents: write
 concurrency:
   group: experimental-price-collection
   cancel-in-progress: false
@@ -13,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: ${{ github.event_name != 'pull_request' }}
       - name: Fetch and validate experimental feed
         run: |
           python - <<'PY'
@@ -34,10 +38,33 @@ jobs:
           if not cards:
               raise ValueError('Empty feed')
           pathlib.Path('snapshot.json').write_text(json.dumps(dict(source=url, updated_at=data['updated'], verified=False, production_signals_enabled=False, cards=cards),ensure_ascii=False))
+          root = pathlib.Path('data')
+          root.mkdir(exist_ok=True)
+          history_path = root / 'history.json'
+          history = json.loads(history_path.read_text()) if history_path.exists() else {'verified':False,'snapshots':[]}
+          next_snapshot = json.loads(pathlib.Path('snapshot.json').read_text())
+          snapshots = history['snapshots']
+          if snapshots and stamp < datetime.datetime.fromisoformat(snapshots[-1]['updated_at'].replace('Z','+00:00')):
+              raise ValueError('Timestamp regressed')
+          if not snapshots or stamp != datetime.datetime.fromisoformat(snapshots[-1]['updated_at'].replace('Z','+00:00')):
+              snapshots.append(next_snapshot)
+          history['snapshots'] = snapshots[-336:]
+          history_path.write_text(json.dumps(history,ensure_ascii=False,separators=(',',':')))
+          (root / 'latest.json').write_text(json.dumps(history['snapshots'][-1],ensure_ascii=False,separators=(',',':')))
           print('Experimental observations:',len(cards))
+          print('Distinct snapshots:',len(history['snapshots']))
           PY
       - uses: actions/upload-artifact@v4
         with:
           name: experimental-snapshot
           path: snapshot.json
           retention-days: 7
+      - name: Persist history on test repository
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/history.json data/latest.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Update experimental price history"
+          git push origin HEAD:main
