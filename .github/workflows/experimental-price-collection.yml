@@ -1,0 +1,43 @@
+name: Experimental price collection
+on:
+  schedule:
+    - cron: '17,47 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: experimental-price-collection
+  cancel-in-progress: false
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fetch and validate experimental feed
+        run: |
+          python - <<'PY'
+          import json, urllib.request, datetime, pathlib
+          url = 'https://fc27-market.val.run/latest'
+          with urllib.request.urlopen(url, timeout=30) as response:
+              data = json.load(response)
+          stamp = datetime.datetime.fromisoformat(data['updated'].replace('Z','+00:00'))
+          age = (datetime.datetime.now(datetime.timezone.utc)-stamp).total_seconds()
+          if not -300 <= age <= 5400:
+              raise ValueError('Stale or future feed')
+          cards = []
+          for group, rows in data['groups'].items():
+              if not isinstance(rows,list):
+                  raise ValueError('Invalid group')
+              for row in rows:
+                  if type(row.get('eaId')) is int and row['eaId'] > 0 and type(row.get('price')) is int and 0 < row['price'] <= 15000000 and isinstance(row.get('name'),str):
+                      cards.append(dict(group=group, ea_id=row['eaId'], name=row['name'], price=row['price'], rating=row.get('rating'), rarity_id=row.get('rarityId')))
+          if not cards:
+              raise ValueError('Empty feed')
+          pathlib.Path('snapshot.json').write_text(json.dumps(dict(source=url, updated_at=data['updated'], verified=False, production_signals_enabled=False, cards=cards),ensure_ascii=False))
+          print('Experimental observations:',len(cards))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: experimental-snapshot
+          path: snapshot.json
+          retention-days: 7
