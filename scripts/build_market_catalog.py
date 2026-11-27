@@ -5,6 +5,7 @@ from urllib.request import urlopen
 from pathlib import Path
 from full_catalog_tradeability_probe import fetch, PRICE, decode
 from smart_market_filter import classify
+from squad_catalog import enrich
 
 def main():
     p=argparse.ArgumentParser()
@@ -29,6 +30,7 @@ def main():
             if type(i) is not int or i<=0: continue
             state=classify(row,prices.get(i))
             item={"eaId":i,"name":row.get("cardName"),"overall":row.get("overall"),"rarity":row.get("rarityName"),"state":state,"quote":prices.get(i) if state=="candidate" else None}
+            item['squad']=enrich(row)
             if i in rows and rows[i]!=item: raise ValueError("Conflicting identity")
             if i not in rows: fresh+=1
             rows[i]=item
