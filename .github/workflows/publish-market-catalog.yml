@@ -39,7 +39,9 @@ jobs:
                   raise SystemExit(0)
           p.write_text(json.dumps(new,ensure_ascii=False),encoding="utf-8")
           PY
-          git add -- market-catalog.json
+          python3 -m unittest discover -s scripts -p catalog_history.py
+          python3 scripts/catalog_history.py
+          git add -- market-catalog.json market-catalog-history.json market-catalog-analysis.json
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Update experimental PS5 catalog"
           git push origin HEAD:main
