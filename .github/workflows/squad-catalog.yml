@@ -1,0 +1,26 @@
+name: Squad Catalog 6.5.3
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/chemistry_engine.py -v
+      - run: python3 scripts/squad_catalog.py -v
+      - run: python3 scripts/build_market_catalog.py --pages 6 --output /tmp/squad-catalog.json
+      - name: Validate enriched sample
+        run: |
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/squad-catalog.json'))
+          cards=d['cards']
+          assert cards and all(c['eaId']==c['squad']['eaId'] for c in cards)
+          assert all(c['squad']['chemistryVerified'] is False for c in cards)
+          assert all(c['quote'] is None for c in cards if c['state']!='candidate')
+          print('SUMMARY',len(cards),'cards',sum(bool(c['squad']['position']) for c in cards),'positions',sum(bool(c['squad']['image']) for c in cards),'images',sum(c['squad']['completeStats'] for c in cards),'complete stats; no publication')
+          PY
