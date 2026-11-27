@@ -12,7 +12,7 @@ jobs:
       - run: node --check squad-ui.js
       - run: |
           node <<'JS'
-          const assert=require('node:assert/strict'),{optimize,F,advise,alternatives}=require('./squad-ui.js');
+          const assert=require('node:assert/strict'),{optimize,F,advise,alternatives,visionMatches,visionUnique}=require('./squad-ui.js');
           for(const [name,expected] of Object.entries({'4-3-3 (2)':'LW ST RW CM CM CDM LB CB CB RB GK','4-2-1-3':'LW ST RW CAM CDM CDM LB CB CB RB GK','4-3-1-2':'ST ST CAM CM CM CM LB CB CB RB GK','4-4-1-1':'ST CAM LM CM CM RM LB CB CB RB GK'})) assert.equal(F[name].flat().join(' '),expected);
           const pos=F['4-3-3'].flat();
           const stats=Object.fromEntries(['facePace','faceShooting','facePassing','faceDribbling','faceDefending','facePhysicality','gkFaceDiving','gkFaceHandling','gkFaceKicking','gkFaceReflexes','gkFaceSpeed','gkFacePositioning'].map(k=>[k,80]));
@@ -29,12 +29,17 @@ jobs:
           cards[0].state='excluded';
           assert.equal(optimize(cards,pos,1000,[],[1],{0:1}).cost,1000);
           assert.equal(optimize(cards,pos,1000,[],[1],{0:2}),null);assert.equal(optimize(cards,pos,1100,[]),null);
-          console.log('Browser optimizer: checks passed');
+          const p={rating:90,nation:'Spain',club:'Barcelona',league:'Liga F',cardPosition:'CM'};
+          const vc=[{eaId:101,overall:90,squad:{position:'CM',nationName:'Spain',clubName:'Barcelona',leagueName:'Liga F'}},{eaId:102,overall:90,squad:{position:'CM',nationName:'Norway',clubName:'Barcelona',leagueName:'Liga F'}}];
+          assert.equal(visionUnique(visionMatches(vc,p,'CM')).eaId,101);
+          assert.equal(visionUnique(visionMatches(vc,{rating:90},'CM')),null);
+          assert.equal(visionUnique(visionMatches([...vc,{...vc[0],eaId:103}],p,'CM')),null);
+          console.log('Browser optimizer and vision matching: checks passed');
           JS
       - run: |
           python3 - <<'PY'
           from pathlib import Path
           s=Path('index.html').read_text()
           assert s.count('id="squad"')==1
-          assert 'href="#squad"' in s and 'src="squad-ui.js"' in s
+          assert 'href="#squad"' in s and 'src="squad-ui.js?v=' in s
           PY
