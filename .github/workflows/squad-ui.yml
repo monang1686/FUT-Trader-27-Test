@@ -1,0 +1,32 @@
+name: Squad UI 6.5.6
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node --check squad-ui.js
+      - run: |
+          node <<'JS'
+          const assert=require('node:assert/strict'),{optimize,F}=require('./squad-ui.js');
+          const pos=F['4-3-3'].flat();
+          const stats=Object.fromEntries(['facePace','faceShooting','facePassing','faceDribbling','faceDefending','facePhysicality','gkFaceDiving','gkFaceHandling','gkFaceKicking','gkFaceReflexes','gkFaceSpeed','gkFacePositioning'].map(k=>[k,80]));
+          const cards=pos.map((position,i)=>({eaId:i+1,state:'candidate',quote:100,squad:{eaId:i+1,baseId:i+1,position,stats,league:1,club:1,nation:1,special:false}}));
+          const x=optimize(cards,pos,1100,[]);
+          assert.equal(x.cost,1100);assert.equal(x.ch,33);
+          assert.equal(optimize(cards,pos,1099,[]),null);
+          assert.equal(optimize(cards,pos,1100,[2]),null);
+          cards[0].state='excluded';assert.equal(optimize(cards,pos,1100,[]),null);
+          console.log('Browser optimizer: four checks passed');
+          JS
+      - run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          s=Path('index.html').read_text()
+          assert s.count('id="squad"')==1
+          assert 'href="#squad"' in s and 'src="squad-ui.js"' in s
+          PY
