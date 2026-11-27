@@ -1,0 +1,16 @@
+name: Full Catalog General Diagnostic
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/full_catalog_general_probe.py'
+      - '.github/workflows/full-catalog-general-diagnostic.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/full_catalog_general_probe.py
