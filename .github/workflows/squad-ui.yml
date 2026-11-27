@@ -12,7 +12,7 @@ jobs:
       - run: node --check squad-ui.js
       - run: |
           node <<'JS'
-          const assert=require('node:assert/strict'),{optimize,F}=require('./squad-ui.js');
+          const assert=require('node:assert/strict'),{optimize,F,advise,alternatives}=require('./squad-ui.js');
           const pos=F['4-3-3'].flat();
           const stats=Object.fromEntries(['facePace','faceShooting','facePassing','faceDribbling','faceDefending','facePhysicality','gkFaceDiving','gkFaceHandling','gkFaceKicking','gkFaceReflexes','gkFaceSpeed','gkFacePositioning'].map(k=>[k,80]));
           const cards=pos.map((position,i)=>({eaId:i+1,state:'candidate',quote:100,squad:{eaId:i+1,baseId:i+1,position,stats,league:1,club:1,nation:1,special:false}}));
@@ -20,8 +20,13 @@ jobs:
           assert.equal(x.cost,1100);assert.equal(x.ch,33);
           assert.equal(optimize(cards,pos,1099,[]),null);
           assert.equal(optimize(cards,pos,1100,[2]),null);
+          assert.equal(advise(cards[0].squad,pos[0],3).length,3);
+          assert.equal(advise(cards[0].squad,pos[0],0).length,0);
+          const extra={...cards[0],eaId:99,quote:90,squad:{...cards[0].squad,eaId:99,baseId:99}};
+          assert.equal(alternatives([...cards,extra],x.slots,0,pos[0],1100,[])[0].c.eaId,99);
+          assert.equal(alternatives([...cards,extra],x.slots,0,pos[0],1089,[]).length,0);
           cards[0].state='excluded';assert.equal(optimize(cards,pos,1100,[]),null);
-          console.log('Browser optimizer: four checks passed');
+          console.log('Browser optimizer: checks passed');
           JS
       - run: |
           python3 - <<'PY'
