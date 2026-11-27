@@ -29,12 +29,31 @@ def analyze(history, catalog):
         out[key]={"samples":len(values),"low":min(values),"high":max(values),"median":median,"sellReference":sell,"netAtQuote":profit,"roi":round(100*profit/current,2),"status":"watch" if profit>=200 and profit/current>=0.05 and not falling else "wait"}
     return out
 
+def archive_daily(history, directory, now):
+    """Retain observed snapshots in daily shards, separate from browser history."""
+    from datetime import timedelta
+    directory.mkdir(exist_ok=True)
+    cutoff=now.date()-timedelta(days=59)
+    grouped={}
+    for snap in history:
+        day=datetime.fromisoformat(snap["t"]).date()
+        if cutoff<=day<=now.date():
+            grouped.setdefault(day.isoformat(),[]).append(snap)
+    for day, rows in grouped.items():
+        p=directory/(day+".json")
+        old=json.loads(p.read_text()) if p.exists() else []
+        merged={datetime.fromisoformat(s["t"]):s for s in old+rows}
+        p.write_text(json.dumps([merged[t] for t in sorted(merged)],separators=(",",":")))
+    for p in directory.glob("????-??-??.json"):
+        if p.stem<cutoff.isoformat(): p.unlink()
+
 def main():
     p=Path("market-catalog-history.json")
     catalog=json.loads(Path("market-catalog.json").read_text())
     history=json.loads(p.read_text()) if p.exists() else []
     history=append(history,catalog)
     p.write_text(json.dumps(history,separators=(",",":")))
+    archive_daily(history,Path('market-archive'),datetime.fromisoformat(catalog['quoteTimestamp']))
     analysis=analyze(history,catalog)
     Path("market-catalog-analysis.json").write_text(json.dumps({"quoteTimestamp":catalog["quoteTimestamp"],"snapshots":len(history),"cards":analysis},separators=(",",":")))
     print("HISTORY",len(history),"ANALYZED",len(analysis),"WATCH",sum(v["status"]=="watch" for v in analysis.values()))
@@ -46,6 +65,15 @@ class Tests(unittest.TestCase):
         self.assertEqual(h[0]["p"],{"1":3600})
         self.assertEqual(append(h,c),h)
         self.assertEqual(analyze(h,c),{})
+    def test_archive(self):
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as d:
+            p=Path(d)
+            t=datetime.fromisoformat("2026-11-27T10:00:00+00:00")
+            h=[{"t":t.isoformat(),"p":{"1":4000}}]
+            archive_daily(h,p,t)
+            archive_daily(h,p,t)
+            self.assertEqual(json.loads((p/"2026-11-27.json").read_text()),h)
     def test_analysis(self):
         h=[{"t":f"2026-11-27T{10+i//2:02d}:{30*(i%2):02d}:00+00:00","p":{"1":v}} for i,v in enumerate([4000,4000,4000,4000,4000,3900])]
         c={"quoteTimestamp":h[-1]["t"],"cards":[{"eaId":1,"state":"candidate","quote":3900}]}
