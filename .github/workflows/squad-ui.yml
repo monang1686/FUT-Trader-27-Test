@@ -26,7 +26,9 @@ jobs:
           const extra={...cards[0],eaId:99,quote:90,squad:{...cards[0].squad,eaId:99,baseId:99}};
           assert.equal(alternatives([...cards,extra],x.slots,0,pos[0],1100,[])[0].c.eaId,99);
           assert.equal(alternatives([...cards,extra],x.slots,0,pos[0],1089,[]).length,0);
-          cards[0].state='excluded';assert.equal(optimize(cards,pos,1100,[]),null);
+          cards[0].state='excluded';
+          assert.equal(optimize(cards,pos,1000,[],[1],{0:1}).cost,1000);
+          assert.equal(optimize(cards,pos,1000,[],[1],{0:2}),null);assert.equal(optimize(cards,pos,1100,[]),null);
           console.log('Browser optimizer: checks passed');
           JS
       - run: |
