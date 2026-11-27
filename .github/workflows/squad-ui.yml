@@ -36,6 +36,10 @@ jobs:
           assert.equal(visionUnique(visionMatches([...vc,{...vc[0],eaId:103}],p,'CM')),null);
           assert.equal(visionMatches(vc,{rating:90},'GK').length,0);
           assert.equal(visionMatches([...vc,{eaId:104,overall:90,squad:{position:'GK'}}],{rating:90},'GK')[0].c.eaId,104);
+          const italian={rating:86,nation:'Inghilterra',club:'Manchester United',league:'Premier League',cardPosition:'ATT',version:'Rttk'};
+          const english={eaId:201,overall:86,rarity:'Road to the Knockouts',squad:{position:'ST',nationName:'England',clubName:'Manchester United',leagueName:'Premier League'}};
+          assert.equal(visionUnique(visionMatches([english],italian,'ST')).eaId,201);
+          assert.equal(visionMatches([english],italian,'ST')[0].evidence,5);
           console.log('Browser optimizer and vision matching: checks passed');
           JS
       - run: |
