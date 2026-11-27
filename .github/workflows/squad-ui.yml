@@ -12,7 +12,7 @@ jobs:
       - run: node --check squad-ui.js
       - run: |
           node <<'JS'
-          const assert=require('node:assert/strict'),{optimize,F,advise,alternatives,visionMatches,visionUnique,squadAdvisor,competitiveUpgrade}=require('./squad-ui.js');
+          const assert=require('node:assert/strict'),{optimize,F,advise,alternatives,visionMatches,visionUnique,squadAdvisor,competitiveUpgrade,playerUpgrade}=require('./squad-ui.js');
           for(const [name,expected] of Object.entries({'4-3-3 (2)':'LW ST RW CM CM CDM LB CB CB RB GK','4-2-1-3':'LW ST RW CAM CDM CDM LB CB CB RB GK','4-3-1-2':'ST ST CAM CM CM CM LB CB CB RB GK','4-4-1-1':'ST CAM LM CM CM RM LB CB CB RB GK'})) assert.equal(F[name].flat().join(' '),expected);
           const pos=F['4-3-3'].flat();
           const stats=Object.fromEntries(['facePace','faceShooting','facePassing','faceDribbling','faceDefending','facePhysicality','gkFaceDiving','gkFaceHandling','gkFaceKicking','gkFaceReflexes','gkFaceSpeed','gkFacePositioning'].map(k=>[k,80]));
@@ -48,7 +48,14 @@ jobs:
           assert.equal(competitiveUpgrade(cards[1],{...upgrade,overall:79},pos[1]),null);
           assert.equal(competitiveUpgrade(cards[1],{...upgrade,squad:{...upgrade.squad,stats}},pos[1]).gain,2.5);
           assert.equal(squadAdvisor([upgrade],x.slots.map((c,i)=>i===0?{...c,squad:{...c.squad,special:true}}:c),pos,500,[]).picks[0].conditional,true);
-          console.log('Browser optimizer, vision and advisor: checks passed');
+          const before=JSON.stringify(x.slots);
+          assert.equal(playerUpgrade([upgrade],x.slots,pos,1,500).picks[0].c.eaId,500);
+          assert.equal(playerUpgrade([upgrade],x.slots,pos,0,500).picks.length,0);
+          assert.equal(playerUpgrade([upgrade],x.slots,pos,1,499).picks.length,0);
+          assert.equal(playerUpgrade([upgrade],x.slots,pos,1,500,[],'chem').picks.length,0);
+          assert.equal(playerUpgrade([upgrade],x.slots.slice(1),pos,1,500),null);
+          assert.equal(JSON.stringify(x.slots),before);
+          console.log('Browser optimizer, vision, advisor and single-slot checks passed');
           JS
       - run: |
           python3 - <<'PY'
