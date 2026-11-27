@@ -34,6 +34,8 @@ jobs:
           assert.equal(visionUnique(visionMatches(vc,p,'CM')).eaId,101);
           assert.equal(visionUnique(visionMatches(vc,{rating:90},'CM')),null);
           assert.equal(visionUnique(visionMatches([...vc,{...vc[0],eaId:103}],p,'CM')),null);
+          assert.equal(visionMatches(vc,{rating:90},'GK').length,0);
+          assert.equal(visionMatches([...vc,{eaId:104,overall:90,squad:{position:'GK'}}],{rating:90},'GK')[0].c.eaId,104);
           console.log('Browser optimizer and vision matching: checks passed');
           JS
       - run: |
