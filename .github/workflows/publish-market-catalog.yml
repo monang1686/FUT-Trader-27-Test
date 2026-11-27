@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: python3 scripts/smart_market_filter.py
-      - run: python3 scripts/build_market_catalog.py --pages 40 --output /tmp/market-catalog.json
+      - run: python3 scripts/build_market_catalog.py --pages 100 --output /tmp/market-catalog.json
       - name: Validate and publish only catalog
         run: |
           git config user.name "github-actions[bot]"
@@ -34,9 +34,10 @@ jobs:
           assert len({c["eaId"] for c in new["cards"]}) == len(new["cards"])
           if p.exists():
               old=json.loads(p.read_text())
-              if stamp <= datetime.fromisoformat(old["quoteTimestamp"]):
+              if stamp < datetime.fromisoformat(old["quoteTimestamp"]) or (stamp == datetime.fromisoformat(old["quoteTimestamp"]) and len(new["cards"]) <= len(old["cards"])):
                   print("No newer snapshot; keeping existing catalog")
                   raise SystemExit(0)
+              assert len(new["cards"]) >= len(old["cards"]), "Catalog coverage regression"
           p.write_text(json.dumps(new,ensure_ascii=False),encoding="utf-8")
           PY
           python3 -m unittest discover -s scripts -p catalog_history.py
