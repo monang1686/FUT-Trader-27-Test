@@ -1,0 +1,16 @@
+name: Chemistry Engine 6.5.2
+on:
+  pull_request:
+    paths:
+      - 'scripts/chemistry_engine.py'
+      - '.github/workflows/chemistry-engine.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/chemistry_engine.py -v
