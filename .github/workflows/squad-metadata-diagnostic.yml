@@ -1,0 +1,16 @@
+name: Squad Metadata 6.5.1
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'scripts/squad_metadata_probe.py'
+      - '.github/workflows/squad-metadata-diagnostic.yml'
+permissions:
+  contents: read
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/squad_metadata_probe.py
