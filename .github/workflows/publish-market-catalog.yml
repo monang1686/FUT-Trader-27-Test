@@ -45,7 +45,9 @@ jobs:
           PY
           python3 -m unittest discover -s scripts -p catalog_history.py
           python3 scripts/catalog_history.py
-          git add -- market-catalog.json market-catalog-history.json market-catalog-analysis.json market-archive
+          python3 -m unittest discover -s scripts -p market_timing_statistics.py
+          python3 scripts/market_timing_statistics.py
+          git add -- market-timing-statistics.json market-catalog.json market-catalog-history.json market-catalog-analysis.json market-archive
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Update experimental PS5 catalog"
           git push origin HEAD:main
