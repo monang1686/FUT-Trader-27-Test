@@ -1,0 +1,14 @@
+name: Chemistry Style Advisor 6.5.5
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/chemistry_engine.py -v
+      - run: python3 scripts/squad_optimizer.py -v
+      - run: python3 scripts/style_advisor.py -v
