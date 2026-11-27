@@ -12,11 +12,11 @@ jobs:
       - run: node --check squad-ui.js
       - run: |
           node <<'JS'
-          const assert=require('node:assert/strict'),{optimize,F,advise,alternatives,visionMatches,visionUnique,squadAdvisor}=require('./squad-ui.js');
+          const assert=require('node:assert/strict'),{optimize,F,advise,alternatives,visionMatches,visionUnique,squadAdvisor,competitiveUpgrade}=require('./squad-ui.js');
           for(const [name,expected] of Object.entries({'4-3-3 (2)':'LW ST RW CM CM CDM LB CB CB RB GK','4-2-1-3':'LW ST RW CAM CDM CDM LB CB CB RB GK','4-3-1-2':'ST ST CAM CM CM CM LB CB CB RB GK','4-4-1-1':'ST CAM LM CM CM RM LB CB CB RB GK'})) assert.equal(F[name].flat().join(' '),expected);
           const pos=F['4-3-3'].flat();
           const stats=Object.fromEntries(['facePace','faceShooting','facePassing','faceDribbling','faceDefending','facePhysicality','gkFaceDiving','gkFaceHandling','gkFaceKicking','gkFaceReflexes','gkFaceSpeed','gkFacePositioning'].map(k=>[k,80]));
-          const cards=pos.map((position,i)=>({eaId:i+1,state:'candidate',quote:100,squad:{eaId:i+1,baseId:i+1,position,stats,league:1,club:1,nation:1,special:false}}));
+          const cards=pos.map((position,i)=>({eaId:i+1,overall:80,state:'candidate',quote:100,squad:{eaId:i+1,baseId:i+1,position,stats,league:1,club:1,nation:1,special:false}}));
           const x=optimize(cards,pos,1100,[]);
           assert.equal(x.cost,1100);assert.equal(x.ch,33);
           assert.equal(optimize(cards,pos,1099,[]),null);
@@ -40,11 +40,14 @@ jobs:
           const english={eaId:201,overall:86,rarity:'Road to the Knockouts',squad:{position:'ST',nationName:'England',clubName:'Manchester United',leagueName:'Premier League'}};
           assert.equal(visionUnique(visionMatches([english],italian,'ST')).eaId,201);
           assert.equal(visionMatches([english],italian,'ST')[0].evidence,5);
-          const upgrade={...cards[1],eaId:500,quote:500,squad:{...cards[1].squad,eaId:500,baseId:500,stats:Object.fromEntries(Object.keys(stats).map(k=>[k,90]))}};
+          const upgrade={...cards[1],eaId:500,overall:90,quote:500,squad:{...cards[1].squad,eaId:500,baseId:500,stats:Object.fromEntries(Object.keys(stats).map(k=>[k,90]))}};
           const report=squadAdvisor([upgrade],x.slots,pos,500,[]);
           assert.equal(report.picks[0].gain,10);
           assert.equal(squadAdvisor([upgrade],x.slots,pos,499,[]).picks.length,0);
           assert.equal(report.base,33);
+          assert.equal(competitiveUpgrade(cards[1],{...upgrade,overall:79},pos[1]),null);
+          assert.equal(competitiveUpgrade(cards[1],{...upgrade,squad:{...upgrade.squad,stats}},pos[1]).gain,2.5);
+          assert.equal(squadAdvisor([upgrade],x.slots.map((c,i)=>i===0?{...c,squad:{...c.squad,special:true}}:c),pos,500,[]).picks[0].conditional,true);
           console.log('Browser optimizer, vision and advisor: checks passed');
           JS
       - run: |
