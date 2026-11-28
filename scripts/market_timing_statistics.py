@@ -26,6 +26,15 @@ def samples(rows):
             out[f"{day.weekday()}:{i}"].append(round(min(p for t,p in inside)/base,5))
     return dict(out)
 
+def cohort_key(c):
+    p=c.get("quote")
+    rating=c.get("overall")
+    rarity=c.get("rarity")
+    if type(p) is not int or p<=0 or type(rating) is not int or not rarity: return None
+    edges=(0,5000,10000,20000,40000,80000,160000,320000,640000,1280000)
+    band=sum(p>=e for e in edges)-1
+    return json.dumps([rarity,rating//2,band],ensure_ascii=False,separators=(",",":"))
+
 def build(directory, catalog):
     series=defaultdict(list)
     seen={}
@@ -44,7 +53,16 @@ def build(directory, catalog):
         key=str(c["eaId"])
         v=samples(series[key])
         if v: cards[key]=v
-    return {"quoteTimestamp":catalog["quoteTimestamp"],"method":"same-day pre-band baseline to observed minimum; historical frequency only","minimumWindows":8,"snapshots":len(seen),"cards":cards}
+    groups=defaultdict(list)
+    membership={}
+    for c in catalog["cards"]:
+        if c["state"]!="candidate": continue
+        k=cohort_key(c)
+        if k is None: continue
+        key=str(c["eaId"])
+        membership[key]=k
+        if key in cards: groups[k].append(key)
+    return {"cohorts":dict(groups),"membership":membership,"quoteTimestamp":catalog["quoteTimestamp"],"method":"same-day pre-band baseline to observed minimum; historical frequency only","minimumWindows":8,"snapshots":len(seen),"cards":cards}
 
 def frequency(values,ratio):
     if len(values)<8: return None
@@ -57,6 +75,11 @@ def main():
     print("TIMING",d["snapshots"],"CARDS",len(d["cards"]))
 
 class Tests(unittest.TestCase):
+    def test_cohort(self):
+        a={"quote":13000,"overall":86,"rarity":"Thunderstruck"}
+        self.assertEqual(cohort_key(a),cohort_key(dict(a,quote=16000,overall=87)))
+        self.assertNotEqual(cohort_key(a),cohort_key(dict(a,rarity="Rare")))
+        self.assertIsNone(cohort_key(dict(a,quote=None)))
     def test_threshold(self):
         self.assertIsNone(frequency([.8]*7,.8))
         self.assertEqual(frequency([.8]*4+[.9]*4,.85),{"hits":4,"n":8})
